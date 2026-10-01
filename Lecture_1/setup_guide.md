@@ -127,7 +127,7 @@ uv add "numpy<2"
 
 Put the quotes around it so the terminal doesn't misread the `<` or `>` symbols.
 
-## 5. Start Jupyter Lab (or run code)
+## 6. Start Jupyter Lab (or run code)
 
 Start Jupyter Lab with:
 

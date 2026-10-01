@@ -1,10 +1,20 @@
-# Lecture 1 `uv` installation
+# Lecture 1 Setup Guide
 
-## 1. Opening a terminal
+## 1. Download the course folder from Github
+
+- navigate to https://github.com/dsl-unibe-ch/wti_python_course/tree/main
+- click on `Code` → `Download ZIP`
+- extract the content and copy the folder `wti_python_course-main` to the location of your choice
+
+---
+
+## 2. Open a terminal and navigate to course folder
 
 - **Windows:** press the Start key, type `PowerShell`, and open **Windows PowerShell** (or **Terminal**).
 - **macOS:** press `Cmd + Space`, type `Terminal`, and press Enter.
 - **Linux:** usually `Ctrl + Alt + T`.
+
+Navigate into `wti_python_course-main` (using `cd` ).
 
 Two commands you will use constantly:
 
@@ -13,7 +23,7 @@ Two commands you will use constantly:
 
 ---
 
-## 2. Installing uv
+## 3. Install uv
 
 You install uv once per computer. Pick the line for your system and paste it into a terminal.
 
@@ -47,7 +57,7 @@ To update uv later (if you used the installer above):
 uv self update
 ```
 
-## 3. Your first project
+## 4. Your first project
 
 This is the workflow we use throughout the course. Stay in the `wti_python_course` folder and run:
 
@@ -76,11 +86,11 @@ uv init --no-package
 
 Two things **don't** exist yet: the `.venv` folder and `uv.lock`. uv creates them the first time you add a package or run your code (next sections). You never create them by hand.
 
-To start with, we delete the following files, as they are not necessary for our course at the moment: `main.py`, `README.md`, `.gitignore`, `.git/`
+To start with, we delete the following files, as they are not necessary for our course at the moment: `main.py`, `.git/`
 
 ---
 
-## 4. Adding and removing packages (such as `jupyter`)
+## 5. Add `jupyter` and other packages to your project
 
 To use a package in your project, **add** it:
 
@@ -88,10 +98,10 @@ To use a package in your project, **add** it:
 uv add jupyter
 ```
 
-You can add several at once:
+You can add several at once. Let's do that:
 
 ```
-uv add jupyter numpy pandas matplotlib
+uv add pandas matplotlib
 ```
 
 Each time you run this, uv:
@@ -102,7 +112,7 @@ Each time you run this, uv:
 
 If you open `pyproject.toml` afterwards you'll see something like `"pandas>=2.3.0"` in the list. That means "pandas, version 2.3.0 or newer".
 
-**Removing** a package works the same way:
+**Removing** a package works the same way (but don't do this now):
 
 ```
 uv remove matplotlib
@@ -117,7 +127,7 @@ uv add "numpy<2"
 
 Put the quotes around it so the terminal doesn't misread the `<` or `>` symbols.
 
-## 5. Starting Jupyter Lab or run code
+## 5. Start Jupyter Lab (or run code)
 
 Start Jupyter Lab with:
 
@@ -128,7 +138,7 @@ uv run jupyter lab
 or run a Python file with:
 
 ```
-uv run hello_world.py
+uv run Lecture_1/hello_world.py
 ```
 
 That's all. Before running, `uv run`:

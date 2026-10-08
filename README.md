@@ -8,7 +8,7 @@ This repository contains the teaching material for the WTI Python introductory c
 | Lecture | Date | Time | Topic |
 | :--- | :--- | :--- | :--- |
 | 1 | Freitag, 2 Oktober 2026 | 13:30-15:30 | Getting Started with Python |
-| 2 | Freitag, 9 Oktober 2026 | 14:30-16:30 | Python Basics I |
+| 2 | Freitag, 9 Oktober 2026 | 13:30-15:30 | Python Basics I |
 | 3 | Freitag, 16 Oktober 2026 | 13:30-15:30 | Python Basics II |
 | 4 | Freitag, 23 Oktober 2026 | 13:30-15:30 | Pandas I |
 | 5 | Freitag, 30 Oktober 2026 | 13:30-15:30 | Pandas II |

@@ -13,8 +13,8 @@ This repository contains the teaching material for the WTI Python introductory c
 | 4 | Freitag, 23 Oktober 2026 | 13:30-15:30 | Pandas I |
 | 5 | Freitag, 30 Oktober 2026 | 13:30-15:30 | Pandas II |
 | 6 | Freitag, 6 November 2026 | 13:30-15:30 | Basic Text Analysis |
-| 7 | Freitag, 13 November 2026 | 13:30-15:30 | Data Viz and Summary I |
-| 8 | Freitag, 20 November 2026 | 13:30-15:30 | Data Viz and Summary II |
+| 7 | Freitag, 13 November 2026 | 13:30-15:30 | Text Analysis II: Keyword Search |
+| 8 | Freitag, 20 November 2026 | 13:30-15:30 | Data Visualization |
 | 9 | Freitag, 27 November 2026 | 13:30-15:30 | From Data to a Simple Analysis |
 | 10 | Freitag, 4 Dezember 2026 | 13:30-15:30 | Text Analysis with TextLab |
 | Evaluation 1 | Freitag, 11. Dezember 2026 | 13:30-15:30 | Evaluation |

@@ -1,0 +1,377 @@
+<title>Collecting Loop Results</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: code on the left, the computer's memory on the right; the list we loop over and the result below. */
+:root {
+  --bg: #f3f6f8;
+  --panel: #ffffff;
+  --fg: #16222b;
+  --muted: #5a6a76;
+  --line: #d6dfe5;
+  --accent: #0d7686;      /* plain variables: overwritten each turn */
+  --accent-soft: rgba(13,118,134,.10);
+  --list: #4650c0;        /* the list `rows`: keeps everything */
+  --list-soft: rgba(70,80,192,.10);
+  --warn: #b0500a;        /* overwritten / lost */
+  --warn-soft: rgba(176,80,10,.10);
+  --hl: rgba(13,118,134,.14);
+  --str: #2f7d32;
+  --kw: #8a3fa0;
+  --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1418; --panel: #162028; --fg: #e4ecf0; --muted: #93a4af; --line: #2a3843;
+    --accent: #3fc1d0; --accent-soft: rgba(63,193,208,.12);
+    --list: #9aa1ff; --list-soft: rgba(154,161,255,.12);
+    --warn: #f1a24c; --warn-soft: rgba(241,162,76,.12);
+    --hl: rgba(63,193,208,.16); --str: #8fd18f; --kw: #d39be6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1418; --panel: #162028; --fg: #e4ecf0; --muted: #93a4af; --line: #2a3843;
+  --accent: #3fc1d0; --accent-soft: rgba(63,193,208,.12);
+  --list: #9aa1ff; --list-soft: rgba(154,161,255,.12);
+  --warn: #f1a24c; --warn-soft: rgba(241,162,76,.12);
+  --hl: rgba(63,193,208,.16); --str: #8fd18f; --kw: #d39be6;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 32px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+h1 { font-size: 1.6rem; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+.sub { margin: 4px 0 0; color: var(--muted); max-width: 64ch; }
+.tabs { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+.tabs button { font: 600 .95rem var(--font); border: 0; background: transparent; color: var(--muted); padding: 8px 14px; border-radius: 7px; cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; }
+@media (max-width: 820px) { .grid, .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.label { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+.label code { font-family: var(--mono); text-transform: none; letter-spacing: 0; font-size: .85rem; }
+
+/* code */
+.code { font-family: var(--mono); font-size: .95rem; overflow-x: auto; }
+.code .ln { display: grid; grid-template-columns: 2.2em 1fr; padding: 2px 6px; border-radius: 6px; white-space: pre; }
+.code .ln .n { color: var(--muted); opacity: .6; user-select: none; }
+.code .ln.cur { background: var(--hl); box-shadow: inset 3px 0 0 var(--accent); }
+.s { color: var(--str); } .k { color: var(--kw); font-weight: 600; } .c { color: var(--muted); font-style: italic; }
+.vs { color: var(--accent); font-weight: 600; } .vl { color: var(--list); font-weight: 600; }
+
+/* narration + controls */
+.narr { font-size: 1.08rem; min-height: 3.2em; margin: 0; }
+.narr code, .sub code, .foot code { font-family: var(--mono); font-size: .92em; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.controls button { font: 600 .95rem var(--font); padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+.controls button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.controls button:disabled { opacity: .4; cursor: default; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.counter { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; font-size: .9rem; }
+.speed { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .9rem; }
+
+/* memory */
+.mem { display: grid; gap: 12px; }
+.vars { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; }
+@media (max-width: 520px) { .vars { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .vars .var:first-child { grid-column: 1 / -1; } }
+.var { border: 2px solid var(--accent); background: var(--accent-soft); border-radius: 10px; padding: 8px 12px; min-width: 0; }
+.var .name { font-family: var(--mono); font-weight: 600; font-size: .9rem; color: var(--accent); margin-bottom: 4px; }
+.val { font-family: var(--mono); font-size: .9rem; overflow-wrap: anywhere; }
+.val.empty { color: var(--muted); font-family: var(--font); font-style: italic; }
+.val.big { font-size: 1.15rem; font-weight: 600; }
+.lost { margin-top: 6px; font-size: .82rem; color: var(--warn); background: var(--warn-soft); border-radius: 6px; padding: 3px 7px; overflow-wrap: anywhere; }
+.lost s { font-family: var(--mono); }
+.var.list { border-color: var(--list); background: var(--list-soft); }
+.var.list .name { color: var(--list); display: flex; justify-content: space-between; }
+.var.list .name small { font-family: var(--font); font-weight: 400; color: var(--muted); }
+.slots { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; max-height: 17.5em; overflow-y: auto; }
+.slots li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); gap: 6px; font-family: var(--mono); font-size: .8rem; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; }
+.slots li .i { color: var(--list); font-weight: 600; }
+.slots li .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slots li.new { opacity: 0; }
+.nolist { font-size: .92rem; color: var(--muted); border: 2px dashed var(--line); border-radius: 10px; padding: 10px 12px; }
+.T { color: var(--str); font-weight: 600; } .F { color: var(--warn); font-weight: 600; }
+
+@keyframes flash { 0% { background: var(--accent); color: var(--panel); } 100% { background: transparent; } }
+.flash { animation: flash .9s ease-out; border-radius: 4px; }
+.flyer { position: fixed; z-index: 50; pointer-events: none; font-family: var(--mono); font-size: .8rem; background: var(--list); color: var(--panel); border-radius: 6px; padding: 3px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: transform .7s cubic-bezier(.3,.7,.2,1), width .7s, opacity .2s; }
+
+/* bottom */
+.paras { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; max-height: 24em; overflow-y: auto; font-size: .86rem; }
+.paras li { display: grid; grid-template-columns: 2em minmax(0, 1fr); gap: 6px; padding: 3px 6px; border-radius: 6px; }
+.paras li .i { color: var(--muted); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.paras li .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paras li.cur { background: var(--hl); box-shadow: inset 3px 0 0 var(--accent); }
+.paras li.done .t { color: var(--muted); }
+.tbl { overflow-x: auto; max-height: 24em; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .75rem; letter-spacing: .06em; color: var(--muted); font-weight: 600; font-family: var(--mono); }
+td { font-family: var(--mono); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+td.p { max-width: 22em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+tr.head td { background: var(--list-soft); }
+tr.diff td.llm { color: var(--list); font-weight: 600; }
+.ph { color: var(--muted); font-style: italic; margin: 0; }
+.out { font-family: var(--mono); font-size: .9rem; white-space: pre-wrap; margin: 0; }
+.warnbox { margin-top: 10px; color: var(--warn); background: var(--warn-soft); border-radius: 8px; padding: 8px 10px; font-size: .92rem; }
+.foot { color: var(--muted); font-size: .82rem; margin: 0; }
+@media (prefers-reduced-motion: reduce) { .flash { animation: none; } .flyer { display: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Why do we start with an empty list?</h1>
+      <p class="sub">A variable holds one value. On every turn of the loop, <code>paragraph</code>, <code>keyword_found</code> and <code>answer</code> get new values and the old ones are gone. The list <code>rows</code> keeps one entry from every turn.</p>
+    </div>
+    <div class="tabs" role="group" aria-label="Version of the loop">
+      <button id="mode-list" aria-pressed="true">With the list</button>
+      <button id="mode-nolist" aria-pressed="false">Without the list</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="panel">
+      <p class="label">The code</p>
+      <div class="code" id="code"></div>
+    </section>
+    <section class="panel">
+      <p class="label">What Python remembers</p>
+      <div class="mem" id="mem"></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <p class="narr" id="narr"></p>
+    <div class="controls">
+      <button id="back">◀ Back</button>
+      <button id="step" class="primary">Step ▶</button>
+      <button id="play">Play</button>
+      <button id="nextrow">Next paragraph ⏭</button>
+      <button id="reset">Reset</button>
+      <label class="speed" for="speed">Speed <input id="speed" type="range" min="1" max="5" value="3"></label>
+      <span class="counter" id="counter"></span>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <p class="label"><code>paragraphs</code>: France, 2016 (19 paragraphs)</p>
+      <ol class="paras" id="paras"></ol>
+    </section>
+    <section class="panel">
+      <p class="label" id="reslabel">Result</p>
+      <div id="result"></div>
+    </section>
+  </div>
+  <p class="foot">Keyboard: → step, ← back, space play/pause. Paragraphs are shortened. The answers are real <code>gpt-oss-120b</code> answers to the Lecture 9 prompt.</p>
+</div>
+
+<script>
+const DATA = [["It is always an honour for me to address the General Assembly. It is also a resp", true, "yes"], ["And yet, standing before the Assembly, let me state once again that despite the ", false, "no"], ["The twenty-first session of the Conference of the Parties to the United Nations ", false, "yes"], ["However, the appeal I want to issue to the Assembly, following this climate agre", false, "no"], ["That is why, on behalf of France, I am proposing a 2020 agenda for Africa. The p", false, "yes"], ["That is why, at the Paris Conference, I launched the African Renewable Energy In", true, "yes"], ["But there will be no development in Africa unless the continent’s security is en", false, "no"], ["Let us be clear — the security of Africans has to come from Africans themselves ", true, "yes"], ["The last call I wish to make here is perhaps the saddest of all. It is for Syria", false, "no"], ["I have one thing to say in this regard — enough is enough. Just like in February", false, "no"], ["The Security Council must meet as soon as possible. It should not be a theatre o", false, "no"], ["If we take these decisions and act now, there will be a solution for Syria. In f", false, "no"], ["We cannot sit back and do nothing. That would be playing into the hands of the f", false, "no"], ["This same spirit led me, along with Chancellor Merkel, to seek a solution in Ukr", false, "no"], ["I have raised the issue of terrorism, which threatens every country of the world", false, "no"], ["In the face of these dangers, France once again turns to the United Nations. The", false, "No"], ["However, if we want to act to eradicate terrorism, we will need to make decision", false, "no"], ["That is why France is so committed to the United Nations and demonstrates it eve", false, "no"], ["That is why I want to appeal to all those here — to call for implementation of t", false, "yes"]]
+  .map(([p, k, a]) => ({ p: p.trim() + "…", k, a }));
+const N = DATA.length;
+
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const S = s => `<span class="s">${esc(s)}</span>`;
+const K = s => `<span class="k">${s}</span>`;
+const C = s => `<span class="c">${s}</span>`;
+const V = s => `<span class="vs">${s}</span>`;
+const VL = `<span class="vl">rows</span>`;
+const short = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;
+const py = b => b ? "True" : "False";
+const pyB = b => `<span class="${b ? "T" : "F"}">${py(b)}</span>`;
+
+const CODE = {
+  list: [
+    `${VL} = []                                   ${C("# create")}`,
+    ``,
+    `${K("for")} ${V("paragraph")} ${K("in")} paragraphs:`,
+    `    ${V("keyword_found")} = ${S('"energy"')} ${K("in")} ${V("paragraph")}.lower()`,
+    `    ${V("answer")} = ask_llm(instruction + ${V("paragraph")})`,
+    `    ${VL}.append({${S('"paragraph"')}: ${V("paragraph")},     ${C("# update")}`,
+    `                 ${S('"keyword"')}: ${V("keyword_found")},`,
+    `                 ${S('"llm"')}: ${V("answer")}.lower()})`,
+    ``,
+    `table = pd.DataFrame(${VL})                  ${C("# use")}`,
+    `table.head()`,
+  ],
+  nolist: [
+    `${K("for")} ${V("paragraph")} ${K("in")} paragraphs:`,
+    `    ${V("keyword_found")} = ${S('"energy"')} ${K("in")} ${V("paragraph")}.lower()`,
+    `    ${V("answer")} = ask_llm(instruction + ${V("paragraph")})`,
+    ``,
+    `print(${V("keyword_found")}, ${V("answer")})`,
+  ],
+};
+const L = {
+  list:   { init: [1], for: [3], kw: [4], ans: [5], app: [6, 7, 8], df: [10], head: [11] },
+  nolist: { init: null, for: [1], kw: [2], ans: [3], app: null, df: [5], head: null },
+};
+
+function buildSteps(mode) {
+  const ln = L[mode], steps = [];
+  let st = { lines: [], i: -1, para: undefined, kw: undefined, ans: undefined, old: {}, rows: undefined, done: false, df: false, head: false, out: null, lost: 0, anim: null,
+    narr: mode === "list"
+      ? "Before the code runs, Python remembers nothing. Press <b>Step</b> to run the first line."
+      : "This version has no list. Watch the three variables on every turn of the loop." };
+  steps.push(st);
+  const push = ch => { st = { ...st, anim: null, old: {}, ...ch }; steps.push(st); };
+
+  if (mode === "list") push({ lines: ln.init, rows: [], narr: "<b>Create</b> an empty list before the loop. It will collect one entry per paragraph." });
+
+  DATA.forEach((d, i) => {
+    const first = i === 0;
+    const lost = st.lost + (!first && mode === "nolist" ? 1 : 0);
+    push({ lines: ln.for, i, para: d.p, kw: first ? undefined : st.kw, ans: first ? undefined : st.ans, old: first ? {} : { para: st.para }, lost, anim: "para",
+      narr: first
+        ? `The loop starts. <code>paragraph</code> now holds paragraph 0.`
+        : `Next turn: <code>paragraph</code> now holds paragraph ${i}. The previous paragraph is <b>overwritten</b>.` +
+          (mode === "list" ? " Its results are already safe in the list." : ` Its results are lost too: <b>${lost}</b> paragraph${lost === 1 ? "" : "s"} lost so far.`) });
+    push({ lines: ln.kw, kw: d.k, old: first ? {} : { kw: steps[steps.length - 1].kw }, anim: "kw",
+      narr: `Is the word "energy" in this paragraph? <b>${py(d.k)}</b>. <code>keyword_found</code> holds only this one answer.` });
+    push({ lines: ln.ans, ans: d.a, old: first ? {} : { ans: steps[steps.length - 1].ans }, anim: "ans",
+      narr: `The model answers <b>"${esc(d.a)}"</b>.` + (d.k !== (d.a.toLowerCase() === "yes") ? " The keyword and the model <b>disagree</b> here." : "") +
+        (d.a !== d.a.toLowerCase() ? ` A capital letter: <code>.lower()</code> will fix it when we store it.` : "") });
+    if (mode === "list") {
+      const n = st.rows.length + 1;
+      push({ lines: ln.app, rows: [...st.rows, { p: d.p, k: d.k, a: d.a.toLowerCase() }], done: false, anim: "append",
+        narr: `<b>Update:</b> <code>append</code> packs the three current values into one dictionary and adds it to the list. The list now holds <b>${n}</b> entr${n === 1 ? "y" : "ies"}.` });
+    }
+  });
+
+  if (mode === "list") {
+    push({ lines: ln.df, i: -1, done: true, df: true,
+      narr: "<b>Use:</b> the loop is finished. <code>pd.DataFrame(rows)</code> turns the 19 dictionaries into a table: one row per dictionary, one column per key." });
+    push({ lines: ln.head, head: true,
+      narr: "<code>table.head()</code> shows the first 5 rows. All 19 paragraphs are there, and we can now compare the two columns (highlighted: where the model found energy and the keyword did not)." });
+  } else {
+    push({ lines: ln.df, i: -1, done: true, out: `${py(st.kw)} ${st.ans}`,
+      narr: `The loop is finished, but the variables hold only the <b>last</b> paragraph's values. The results of the other <b>18 paragraphs are lost</b>.` });
+  }
+  return steps;
+}
+
+let mode = "list", steps = buildSteps(mode), k = 0, timer = null;
+const $ = id => document.getElementById(id);
+
+function varBox(id, name, val, oldVal, fmt, flash, big) {
+  const has = val !== undefined;
+  return `<div class="var" id="${id}"><div class="name">${name}</div>` +
+    (has ? `<div class="val${big ? " big" : ""}${flash ? " flash" : ""}">${fmt(val)}</div>` : `<div class="val empty">not created yet</div>`) +
+    (oldVal !== undefined ? `<div class="lost">overwritten: <s>${esc(typeof oldVal === "boolean" ? py(oldVal) : '"' + short(oldVal, 28) + '"')}</s></div>` : "") + `</div>`;
+}
+
+function render(animate) {
+  const st = steps[k];
+  $("code").innerHTML = CODE[mode].map((h, j) =>
+    `<div class="ln${st.lines.includes(j + 1) ? " cur" : ""}"><span class="n">${j + 1}</span><span>${h || " "}</span></div>`).join("");
+
+  let m = `<div class="vars">` +
+    varBox("v-para", "paragraph", st.para, st.old.para, v => `"${esc(short(v, 60))}"`, animate && st.anim === "para") +
+    varBox("v-kw", "keyword_found", st.kw, st.old.kw, pyB, animate && st.anim === "kw", true) +
+    varBox("v-ans", "answer", st.ans, st.old.ans, v => `"${esc(v)}"`, animate && st.anim === "ans", true) + `</div>`;
+  if (mode === "list") {
+    m += `<div class="var list"><div class="name">rows <small>${st.rows === undefined ? "" : "len(rows) = " + st.rows.length}</small></div>` +
+      (st.rows === undefined ? `<div class="val empty">not created yet</div>`
+        : st.rows.length === 0 ? `<div class="val">[]</div>`
+        : `<ol class="slots" id="slots">${st.rows.map((r, j) =>
+            `<li class="${animate && st.anim === "append" && j === st.rows.length - 1 ? "new" : ""}"><span class="i">[${j}]</span>` +
+            `<span class="t">{"paragraph": "${esc(short(r.p, 22))}", "keyword": ${pyB(r.k)}, "llm": "${esc(r.a)}"}</span></li>`).join("")}</ol>`) + `</div>`;
+  } else {
+    m += `<div class="nolist">No list in this version. Nothing keeps the values from earlier turns.` +
+      (st.lost ? ` <span class="F">Paragraphs lost so far: ${st.lost}</span>` : "") + `</div>`;
+  }
+  $("mem").innerHTML = m;
+  const slots = $("slots"); if (slots) slots.scrollTop = slots.scrollHeight;
+
+  $("paras").innerHTML = DATA.map((d, j) =>
+    `<li class="${st.i === j ? "cur" : ""}${(st.done || j < st.i) ? " done" : ""}" ${st.i === j ? 'id="curpara"' : ""}><span class="i">${j}</span><span class="t">${esc(d.p)}</span></li>`).join("");
+  const cp = $("curpara"); if (cp) { const box = $("paras"); box.scrollTop = Math.max(0, cp.offsetTop - box.offsetTop - box.clientHeight / 2); }
+
+  if (mode === "list") {
+    $("reslabel").innerHTML = "<code>table</code> = pd.DataFrame(rows)";
+    $("result").innerHTML = !st.df ? `<p class="ph">The table does not exist yet. It is made after the loop, from the list.</p>`
+      : `<div class="tbl"><table><thead><tr><th class="num"></th><th>paragraph</th><th>keyword</th><th>llm</th></tr></thead><tbody>` +
+        st.rows.map((r, j) => `<tr class="${st.head && j < 5 ? "head" : ""}${!r.k && r.a === "yes" ? " diff" : ""}"><td class="num">${j}</td><td class="p">${esc(r.p)}</td><td>${pyB(r.k)}</td><td class="llm">${esc(r.a)}</td></tr>`).join("") +
+        `</tbody></table></div>`;
+  } else {
+    $("reslabel").textContent = "Printed output";
+    $("result").innerHTML = st.out === null ? `<p class="ph">Nothing printed yet.</p>`
+      : `<pre class="out">${esc(st.out)}</pre><div class="warnbox">Only the values for the last paragraph (18) are left. Switch to <b>With the list</b> to keep all 19.</div>`;
+  }
+
+  $("narr").innerHTML = st.narr;
+  $("counter").textContent = `Step ${k} / ${steps.length - 1}`;
+  $("back").disabled = k === 0;
+  $("step").disabled = $("nextrow").disabled = k === steps.length - 1;
+  $("play").textContent = timer ? "Pause" : (k === steps.length - 1 ? "Replay" : "Play");
+  if (animate && st.anim === "append") fly();
+}
+
+function fly() {
+  const src = $("v-para"), slots = $("slots");
+  if (!src || !slots) return;
+  const target = slots.lastElementChild;
+  const reveal = () => target.classList.remove("new");
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return reveal();
+  const a = src.getBoundingClientRect(), b = target.getBoundingClientRect();
+  const f = document.createElement("div");
+  f.className = "flyer"; f.textContent = target.querySelector(".t").textContent;
+  Object.assign(f.style, { left: a.left + "px", top: a.top + "px", width: Math.min(a.width, 360) + "px" });
+  document.body.appendChild(f);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    f.style.transform = `translate(${b.left - a.left}px, ${b.top - a.top}px)`;
+    f.style.width = b.width + "px";
+  }));
+  setTimeout(() => { reveal(); f.style.opacity = "0"; setTimeout(() => f.remove(), 250); }, 720);
+}
+
+const delay = () => [2600, 1800, 1200, 750, 420][$("speed").value - 1];
+function step() { if (k < steps.length - 1) { k++; render(true); } }
+function back() { if (k > 0) { k--; render(false); } }
+function nextRow() {
+  const cur = steps[k].i;
+  do { k++; } while (k < steps.length - 1 && !(steps[k].anim === "para" && steps[k].i !== cur) && !steps[k].done);
+  render(true);
+}
+function stop() { clearTimeout(timer); timer = null; render(false); }
+function tick() { step(); if (k < steps.length - 1) timer = setTimeout(tick, delay()); else { timer = null; render(false); } }
+function play() {
+  if (timer) return stop();
+  if (k === steps.length - 1) { k = 0; render(false); }
+  timer = setTimeout(tick, 200); render(false);
+}
+function setMode(m) {
+  clearTimeout(timer); timer = null; mode = m; steps = buildSteps(m); k = 0;
+  $("mode-list").setAttribute("aria-pressed", m === "list"); $("mode-nolist").setAttribute("aria-pressed", m === "nolist");
+  render(false);
+}
+
+$("step").onclick = () => { if (timer) stop(); step(); };
+$("back").onclick = () => { if (timer) stop(); back(); };
+$("nextrow").onclick = () => { if (timer) stop(); nextRow(); };
+$("reset").onclick = () => { clearTimeout(timer); timer = null; k = 0; render(false); };
+$("play").onclick = play;
+$("mode-list").onclick = () => setMode("list");
+$("mode-nolist").onclick = () => setMode("nolist");
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowRight") { e.preventDefault(); $("step").click(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); $("back").click(); }
+  else if (e.key === " ") { e.preventDefault(); play(); }
+});
+render(false);
+</script>

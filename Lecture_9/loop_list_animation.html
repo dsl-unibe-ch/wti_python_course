@@ -71,9 +71,11 @@ h1 { font-size: 1.6rem; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
 .vs { color: var(--accent); font-weight: 600; } .vl { color: var(--list); font-weight: 600; }
 
 /* narration + controls */
-.narr { font-size: 1.08rem; min-height: 3.2em; margin: 0; }
+.narr { font-size: 1.08rem; min-height: 3em; margin: 12px 0 0; }
+.ctrlpanel { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; box-shadow: 0 6px 16px -12px rgba(0,0,0,.35); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 21; background: var(--bg); }
 .narr code, .sub code, .foot code { font-family: var(--mono); font-size: .92em; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
-.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .controls button { font: 600 .95rem var(--font); padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
 .controls button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
 .controls button:disabled { opacity: .4; cursor: default; }
@@ -142,6 +144,19 @@ tr.diff td.llm { color: var(--list); font-weight: 600; }
     </div>
   </header>
 
+  <section class="panel ctrlpanel">
+    <div class="controls">
+      <button id="back">◀ Back</button>
+      <button id="step" class="primary">Step ▶</button>
+      <button id="play">Play</button>
+      <button id="nextrow">Next paragraph ⏭</button>
+      <button id="reset">Reset</button>
+      <label class="speed" for="speed">Speed <input id="speed" type="range" min="1" max="5" value="3"></label>
+      <span class="counter" id="counter"></span>
+    </div>
+    <p class="narr" id="narr"></p>
+  </section>
+
   <div class="grid">
     <section class="panel">
       <p class="label">The code</p>
@@ -152,19 +167,6 @@ tr.diff td.llm { color: var(--list); font-weight: 600; }
       <div class="mem" id="mem"></div>
     </section>
   </div>
-
-  <section class="panel">
-    <p class="narr" id="narr"></p>
-    <div class="controls">
-      <button id="back">◀ Back</button>
-      <button id="step" class="primary">Step ▶</button>
-      <button id="play">Play</button>
-      <button id="nextrow">Next paragraph ⏭</button>
-      <button id="reset">Reset</button>
-      <label class="speed" for="speed">Speed <input id="speed" type="range" min="1" max="5" value="3"></label>
-      <span class="counter" id="counter"></span>
-    </div>
-  </section>
 
   <div class="grid2">
     <section class="panel">
@@ -271,7 +273,8 @@ function varBox(id, name, val, oldVal, fmt, flash, big) {
   const has = val !== undefined;
   return `<div class="var" id="${id}"><div class="name">${name}</div>` +
     (has ? `<div class="val${big ? " big" : ""}${flash ? " flash" : ""}">${fmt(val)}</div>` : `<div class="val empty">not created yet</div>`) +
-    (oldVal !== undefined ? `<div class="lost">overwritten: <s>${esc(typeof oldVal === "boolean" ? py(oldVal) : '"' + short(oldVal, 28) + '"')}</s></div>` : "") + `</div>`;
+    (oldVal !== undefined ? `<div class="lost">overwritten: <s>${esc(typeof oldVal === "boolean" ? py(oldVal) : '"' + short(oldVal, 28) + '"')}</s></div>`
+      : `<div class="lost" style="visibility:hidden" aria-hidden="true">overwritten: <s>"…"</s></div>`) + `</div>`;
 }
 
 function render(animate) {
